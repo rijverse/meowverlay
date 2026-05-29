@@ -7,10 +7,18 @@ use crate::ui;
 use egui::{Color32, Sense, Vec2, ViewportCommand};
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// VK codes for the global lock hotkey: Ctrl + Shift + L.
 const LOCK_COMBO: [u32; 3] = [17, 16, 76];
+
+/// Repaint cap while something is animating (keys held, cursor easing, smoke alive). The overlay is
+/// cosmetic, so 60 is plenty smooth.
+const ACTIVE_FPS: f32 = 60.0;
+/// Repaint cap when fully idle. Input is still polled at this rate, so the worst-case lag before the
+/// paw reacts after a pause is ~1/IDLE_FPS — imperceptible for a cosmetic overlay, and it roughly
+/// halves idle GPU/CPU versus rendering flat-out.
+const IDLE_FPS: f32 = 30.0;
 
 /// Which config binding is currently capturing a key press.
 #[derive(Clone, Copy, PartialEq)]
@@ -264,7 +272,13 @@ impl eframe::App for MeowApp {
 
         self.draw_toast(&ctx);
 
-        // Keep animating.
-        ctx.request_repaint();
+        // Adaptive repaint cap. Stay at 60fps while anything moves; otherwise idle at a lower rate
+        // that still polls input promptly. (We drive our own clock since global input is polled, not
+        // event-driven, so egui won't wake us on key/mouse activity by itself.)
+        let still_easing = (cursor_norm.0 - target.0).abs() > 1e-4
+            || (cursor_norm.1 - target.1).abs() > 1e-4;
+        let animating = !input.pressed.is_empty() || !self.anim.smoke.is_empty() || still_easing;
+        let fps = if animating { ACTIVE_FPS } else { IDLE_FPS };
+        ctx.request_repaint_after(Duration::from_secs_f32(1.0 / fps));
     }
 }

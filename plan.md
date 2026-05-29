@@ -68,6 +68,12 @@ src/ui/{mod,settings}.rs
   (0–0.2 s). Persisted on Save; preserved for non-Meowverlay skins via serde default. First frame
   snaps to avoid swooping from (0,0). Config now has a manual `Default` (also fixes mode default → 1).
 
+- **Adaptive FPS cap** (2026-05-29): replaced unconditional `request_repaint()` with
+  `request_repaint_after`. 60fps while animating (keys/buttons held, cursor still easing toward
+  target, or smoke particles alive), 30fps when fully idle. We drive our own clock because
+  device_query input is polled, not event-driven; idle rate still polls input every ~33ms so the paw
+  reacts promptly. Roughly halves idle GPU/CPU vs flat-out rendering. Consts `ACTIVE_FPS`/`IDLE_FPS`.
+
 ## Notes / decisions
 - Keycode convention kept = numeric JS/VK codes from existing config.json (A=65, etc.).
 - Cursor mapping reuses old math: normalize real cursor by config.resolution, map into
