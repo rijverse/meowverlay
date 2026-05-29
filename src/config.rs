@@ -139,7 +139,7 @@ impl Default for MousePaw {
     fn default() -> Self { Self { paw_starting_point: paw_start(), paw_ending_point: paw_end() } }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default = "default_mode")]
     pub mode: u32,
@@ -158,12 +158,35 @@ pub struct Config {
     #[serde(rename = "mousePaw", default)]
     pub mouse_paw: MousePaw,
 
+    /// Meowverlay-specific: cursor smoothing time constant (seconds). 0 = off (snap to raw poll);
+    /// larger = smoother but laggier. Not part of `bongocat-osu`; preserved on save.
+    #[serde(rename = "cursorSmoothing", default = "default_cursor_smoothing")]
+    pub cursor_smoothing: f32,
+
     /// Any extra top-level keys we don't model (e.g. `"custom"`) — preserved across save.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 fn default_mode() -> u32 { 1 }
+fn default_cursor_smoothing() -> f32 { 0.045 }
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            mode: default_mode(),
+            resolution: Resolution::default(),
+            decoration: Decoration::default(),
+            osu: OsuCfg::default(),
+            taiko: TaikoCfg::default(),
+            catch_cfg: CatchCfg::default(),
+            mania: ManiaCfg::default(),
+            mouse_paw: MousePaw::default(),
+            cursor_smoothing: default_cursor_smoothing(),
+            extra: serde_json::Map::new(),
+        }
+    }
+}
 
 impl Config {
     pub fn load(path: &Path) -> Result<Self> {

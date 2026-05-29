@@ -66,6 +66,13 @@ fn general_section(ctx: &egui::Context, app: &mut MeowApp, ui: &mut egui::Ui) {
     ui.checkbox(&mut cfg.decoration.left_handed, "Left-handed layout");
     ui.checkbox(&mut cfg.osu.mouse, "Use mouse (vs. tablet)");
     ui.checkbox(&mut cfg.osu.toggle_smoke, "Toggle smoke (vs. hold)");
+
+    ui.add(
+        egui::Slider::new(&mut cfg.cursor_smoothing, 0.0..=0.2)
+            .text("Cursor smoothing")
+            .custom_formatter(|v, _| if v <= 0.0 { "off".to_owned() } else { format!("{v:.3} s") }),
+    )
+    .on_hover_text("Easing time for cursor tracking. 0 = instant (raw poll); higher = smoother but laggier.");
 }
 
 fn bindings_section(app: &mut MeowApp, ui: &mut egui::Ui, pressed: &HashSet<u32>) {

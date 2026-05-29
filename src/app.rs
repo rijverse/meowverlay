@@ -36,6 +36,9 @@ pub struct MeowApp {
     pub(crate) skin: Skin,
     input: GlobalInput,
     anim: AnimState,
+    /// Rendered cursor position (normalized [0,1]), eased toward the raw poll each frame.
+    /// `None` until the first poll, so we snap to the initial position instead of swooping from 0.
+    cursor_smooth: Option<(f32, f32)>,
 
     pub(crate) locked: bool,
     pub(crate) settings_open: bool,
@@ -61,6 +64,7 @@ impl MeowApp {
             skin,
             input: GlobalInput::new(),
             anim: AnimState::default(),
+            cursor_smooth: None,
             locked: false,
             settings_open: true,
             binding: None,
@@ -207,10 +211,25 @@ impl eframe::App for MeowApp {
             .unwrap_or_else(|| {
                 Vec2::new(self.skin.config.resolution.width as f32, self.skin.config.resolution.height as f32)
             });
-        let cursor_norm = (
+        let target = (
             (input.cursor.0 as f32 / monitor.x.max(1.0)).clamp(0.0, 1.0),
             (input.cursor.1 as f32 / monitor.y.max(1.0)).clamp(0.0, 1.0),
         );
+
+        // Ease the rendered cursor toward the raw target. `alpha = 1 - e^(-dt/tau)` makes the
+        // smoothing frame-rate independent; `stable_dt` is egui's spike-clamped frame time. The tau
+        // (seconds) comes from the skin config slider; tau <= 0 means "off" (snap to the raw poll).
+        let tau = self.skin.config.cursor_smoothing;
+        let dt = ctx.input(|i| i.stable_dt);
+        let cursor_norm = match self.cursor_smooth {
+            Some((cx, cy)) if tau > 0.0 => {
+                let alpha = (1.0 - (-dt / tau).exp()).clamp(0.0, 1.0);
+                (cx + (target.0 - cx) * alpha, cy + (target.1 - cy) * alpha)
+            }
+            // First frame, or smoothing off: snap so we don't swoop from (0,0).
+            _ => target,
+        };
+        self.cursor_smooth = Some(cursor_norm);
 
         // ── Render the overlay ──
         let rect = ui.max_rect();

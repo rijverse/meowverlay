@@ -61,6 +61,13 @@ src/ui/{mod,settings}.rs
   `ctx` obtained via `ui.ctx().clone()` for viewport commands + deferred settings/toast windows.
 - Dropped `CentralPanel`/`Frame::none()` wrapper (the provided `Ui` already has no background).
 
+## Polish log
+- **Cursor smoothing** (2026-05-29): rendered cursor eases toward the raw `device_query` poll each
+  frame via frame-rate-independent easing `alpha = 1 - e^(-dt/tau)` (`stable_dt`). `tau` (seconds) is
+  a per-skin config key `cursorSmoothing` (default 0.045, 0 = off/snap), exposed as a settings slider
+  (0–0.2 s). Persisted on Save; preserved for non-Meowverlay skins via serde default. First frame
+  snaps to avoid swooping from (0,0). Config now has a manual `Default` (also fixes mode default → 1).
+
 ## Notes / decisions
 - Keycode convention kept = numeric JS/VK codes from existing config.json (A=65, etc.).
 - Cursor mapping reuses old math: normalize real cursor by config.resolution, map into
