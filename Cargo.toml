@@ -1,0 +1,23 @@
+[package]
+name = "meowverlay"
+version = "0.2.0"
+edition = "2021"
+description = "A native Bongo Cat / Pengu input overlay for osu!, inspired by bongocat-osu"
+authors = ["Meowverlay contributors"]
+
+[[bin]]
+name = "meowverlay"
+path = "src/main.rs"
+
+[dependencies]
+eframe = { version = "0.34", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+egui = "0.34"
+device_query = "4"
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+[profile.release]
+opt-level = 3
+lto = true

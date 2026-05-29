@@ -2,10 +2,10 @@
   "mode": 1,
   "resolution": {
     "letterboxing": false,
-    "width": 1920,
-    "height": 1080,
-    "horizontalPosition": 0,
-    "verticalPosition": 0
+    "width": 1920.0,
+    "height": 1080.0,
+    "horizontalPosition": 0.0,
+    "verticalPosition": 0.0
   },
   "decoration": {
     "leftHanded": false,
@@ -15,16 +15,16 @@
       255
     ],
     "offsetX": [
-      0,
-      11
+      0.0,
+      11.0
     ],
     "offsetY": [
-      0,
-      -65
+      0.0,
+      -65.0
     ],
     "scalar": [
-      1,
-      1
+      1.0,
+      1.0
     ]
   },
   "osu": {
@@ -94,14 +94,24 @@
       76
     ]
   },
+  "mousePaw": {
+    "pawStartingPoint": [
+      211.0,
+      159.0
+    ],
+    "pawEndingPoint": [
+      258.0,
+      228.0
+    ]
+  },
   "custom": {
     "background": "img/osu/mousebg.png",
+    "keyContainers": [],
     "mouse": false,
     "mouseImage": "img/osu/mouse.png",
     "mouseOnTop": true,
     "offsetX": 0,
     "offsetY": 0,
-    "scalar": 1,
     "paw": [
       255,
       255,
@@ -112,17 +122,6 @@
       0,
       0
     ],
-    "keyContainers": []
-  },
-  "mousePaw": {
-    "mousePawComment": "coordinates start in the top left of the window",
-    "pawStartingPoint": [
-      211,
-      159
-    ],
-    "pawEndingPoint": [
-      258,
-      228
-    ]
+    "scalar": 1
   }
 }
