@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meowverlay</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <div id="overlay-container">
+      <canvas id="overlay-canvas" width="612" height="354"></canvas>
+      
+      <!-- Floating Gear Button (Visible only when unlocked) -->
+      <button id="settings-toggle-btn" class="floating-btn" title="Open Settings">⚙</button>
+      
+      <!-- Premium Glassmorphic Settings Panel -->
+      <div id="settings-panel" class="visible" data-tauri-drag-region>
+        <div class="settings-header" data-tauri-drag-region>
+          <div class="header-title" data-tauri-drag-region>
+            <span class="logo">🐱</span>
+            <span class="title-text" data-tauri-drag-region>Meowverlay Settings</span>
+          </div>
+          <button id="close-settings-btn" class="icon-btn" title="Close Panel">✕</button>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="general">General</button>
+          <button class="tab-btn" data-tab="bindings-std-taiko">Standard / Taiko</button>
+          <button class="tab-btn" data-tab="bindings-catch-mania">Catch / Mania</button>
+        </div>
+        
+        <!-- Tab Contents -->
+        <div class="tab-content">
+          <!-- General Tab -->
+          <div class="tab-pane active" id="tab-general">
+            <div class="settings-grid">
+              <div class="control-item">
+                <label for="skin-select">Active Skin</label>
+                <select id="skin-select"></select>
+              </div>
+              <div class="control-item">
+                <label for="mode-select">Game Mode</label>
+                <select id="mode-select">
+                  <option value="1">Standard (osu!)</option>
+                  <option value="2">Taiko</option>
+                  <option value="3">Catch the Beat</option>
+                  <option value="4">Mania</option>
+                </select>
+              </div>
+              <div class="control-item checkbox-item">
+                <input type="checkbox" id="left-handed-toggle" />
+                <label for="left-handed-toggle">Left-Handed Layout</label>
+              </div>
+              <div class="control-item checkbox-item">
+                <input type="checkbox" id="mouse-toggle" />
+                <label for="mouse-toggle">Use Mouse (vs. Tablet)</label>
+              </div>
+              <div class="control-item checkbox-item">
+                <input type="checkbox" id="smoke-toggle" />
+                <label for="smoke-toggle">Toggle Smoke (Hold/Toggle)</label>
+              </div>
+            </div>
+            <div class="calibration-section">
+              <div class="section-title">Calibration & Info</div>
+              <div class="info-row">
+                <span>Resolution:</span>
+                <span id="resolution-display">1920x1080</span>
+              </div>
+              <div class="info-row">
+                <span>Global Input:</span>
+                <span id="global-input-status" class="status-badge checking">Checking...</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Standard / Taiko Tab -->
+          <div class="tab-pane" id="tab-bindings-std-taiko">
+            <div class="bindings-sections">
+              <div class="binding-group">
+                <h3>osu! Standard</h3>
+                <div class="binding-row">
+                  <label>Key 1 (Left):</label>
+                  <button class="key-bind-btn" data-config-path="osu.key1">Z</button>
+                </div>
+                <div class="binding-row">
+                  <label>Key 2 (Right):</label>
+                  <button class="key-bind-btn" data-config-path="osu.key2">X</button>
+                </div>
+                <div class="binding-row">
+                  <label>Smoke Key:</label>
+                  <button class="key-bind-btn" data-config-path="osu.smoke">C</button>
+                </div>
+                <div class="binding-row">
+                  <label>Wave Key:</label>
+                  <button class="key-bind-btn" data-config-path="osu.wave">None</button>
+                </div>
+              </div>
+              
+              <div class="binding-group">
+                <h3>osu! Taiko</h3>
+                <div class="binding-row">
+                  <label>Left Rim (Don):</label>
+                  <button class="key-bind-btn" data-config-path="taiko.leftRim">Z</button>
+                </div>
+                <div class="binding-row">
+                  <label>Left Centre (Ka):</label>
+                  <button class="key-bind-btn" data-config-path="taiko.leftCentre">X</button>
+                </div>
+                <div class="binding-row">
+                  <label>Right Centre (Ka):</label>
+                  <button class="key-bind-btn" data-config-path="taiko.rightCentre">C</button>
+                </div>
+                <div class="binding-row">
+                  <label>Right Rim (Don):</label>
+                  <button class="key-bind-btn" data-config-path="taiko.rightRim">V</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Catch / Mania Tab -->
+          <div class="tab-pane" id="tab-bindings-catch-mania">
+            <div class="bindings-sections">
+              <div class="binding-group">
+                <h3>osu! Catch</h3>
+                <div class="binding-row">
+                  <label>Move Left:</label>
+                  <button class="key-bind-btn" data-config-path="catch.left">←</button>
+                </div>
+                <div class="binding-row">
+                  <label>Move Right:</label>
+                  <button class="key-bind-btn" data-config-path="catch.right">→</button>
+                </div>
+                <div class="binding-row">
+                  <label>Dash (Shift):</label>
+                  <button class="key-bind-btn" data-config-path="catch.dash">Shift</button>
+                </div>
+              </div>
+              
+              <div class="binding-group">
+                <h3>osu! Mania</h3>
+                <div class="binding-row">
+                  <label>Mania Mode:</label>
+                  <select id="mania-keys-select">
+                    <option value="4">4 Keys (4K)</option>
+                    <option value="7">7 Keys (7K)</option>
+                  </select>
+                </div>
+                <div id="mania-keys-container" class="mania-keys-grid">
+                  <!-- Generated dynamically via TS -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Action Footer -->
+        <div class="settings-footer">
+          <button id="save-config-btn" class="action-btn secondary">Save Configuration</button>
+          <button id="lock-btn" class="action-btn primary">🔒 Lock Overlay</button>
+        </div>
+      </div>
+      
+      <!-- Global Status Toast -->
+      <div id="status-toast"></div>
+    </div>
+  </body>
+</html>
