@@ -2,7 +2,7 @@
 
 A fast, native Bongo Cat input overlay for osu! written in Rust. It runs as a lightweight, transparent, always-on-top window.
 
-Unlike overlays built on web stacks (Electron/Tauri), Meowverlay reads your global mouse and keyboard state directly for native performance. On Windows, macOS, and Linux/X11 it polls absolute cursor coordinates (zero drift). On Linux/Wayland it reads the kernel input devices (`/dev/input`, via the `input` group) — the only way to capture global input under Wayland, where the compositor hides other windows' keyboard state and the pointer from apps.
+Unlike overlays built on web stacks (Electron/Tauri), Meowverlay reads your global mouse and keyboard state directly for native performance. On Windows, macOS, and Linux/X11 it polls absolute cursor coordinates (zero drift). On Linux/Wayland it reads the kernel input devices (`/dev/input`, via the `input` group). That is the only way to capture global input under Wayland, where the compositor hides other windows' keyboard state and the pointer from apps.
 
 Inspired by [`kuroni/bongocat-osu`](https://github.com/kuroni/bongocat-osu) and [`HamishDuncanson/pengu-overlay`](https://github.com/HamishDuncanson/pengu-overlay).
 
@@ -11,7 +11,7 @@ Inspired by [`kuroni/bongocat-osu`](https://github.com/kuroni/bongocat-osu) and 
 ### Key Features
 
 * **Native Performance:** GPU-accelerated window rendered with `egui` and `eframe`. Extremely low CPU/GPU usage.
-* **Accurate Cursor Tracking:** Uses absolute screen coordinates on Windows, macOS, and X11, so the cat's hand never drifts from your cursor. On Wayland — which hides the global pointer from apps — it tracks relative motion, while graphics tablets are tracked absolutely.
+* **Accurate Cursor Tracking:** Uses absolute screen coordinates on Windows, macOS, and X11, so the cat's hand never drifts from your cursor. On Wayland, which hides the global pointer from apps, it tracks relative motion, while graphics tablets are tracked absolutely.
 * **Supported Modes:** Standard (osu!std), Taiko, Catch the Beat, and Mania (4K & 7K).
 * **Skin Compatibility:** Drop-in support for any existing `bongocat-osu` skin folder. The window dynamically resizes to match the skin's background image dimensions.
 * **On-the-fly Config:** Customize keybinds (including binding multiple keys to a single action), switch modes, toggle left-handed layouts, or adjust cursor smoothing from the in-app settings panel.
@@ -60,7 +60,7 @@ sudo usermod -aG input "$USER"   # then log out and back in
 
 ## Operating System Setup
 
-* **Linux:** Runs on both X11 and Wayland. Global input is captured via `/dev/input`, so your user must belong to the `input` group (`sudo usermod -aG input "$USER"`, then re-log) — this is the default on most desktops. On an X11 session without that membership it transparently falls back to X11 polling. Note that click-through (lock mode) is best-effort on some Wayland compositors due to window manager limitations.
+* **Linux:** Runs on both X11 and Wayland. Global input is captured via `/dev/input`, so your user must belong to the `input` group (`sudo usermod -aG input "$USER"`, then re-log). This is the default on most desktops. On an X11 session without that membership it transparently falls back to X11 polling. Note that click-through (lock mode) is best-effort on some Wayland compositors due to window manager limitations.
 * **macOS:** You must grant **Accessibility permission** for the application to poll global keyboard inputs. Enable this under *System Settings → Privacy & Security → Accessibility* on your first run.
 * **Windows:** Works immediately out of the box.
 

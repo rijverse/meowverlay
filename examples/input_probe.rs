@@ -3,7 +3,7 @@
 //! Run with `cargo run --example input_probe`, then **move the mouse and press keys** for ~12s.
 //!
 //! On Linux this exercises the same `evdev` (`/dev/input/event*`) path Meowverlay itself uses, so it
-//! works under both X11 and Wayland — provided you can read the device nodes (membership of the
+//! works under both X11 and Wayland, provided you can read the device nodes (membership of the
 //! `input` group). If keys/buttons print and the mouse-motion count climbs as you move, Meowverlay's
 //! input path is healthy here. On Windows/macOS it uses `device_query` (Accessibility permission
 //! required on macOS).
@@ -16,7 +16,7 @@ fn main() {
     use std::thread;
     use std::time::Duration;
 
-    println!("Linux evdev probe — opening /dev/input devices...\n");
+    println!("Linux evdev probe: opening /dev/input devices...\n");
     let motion = Arc::new(AtomicU64::new(0));
     let mut opened = 0u32;
 

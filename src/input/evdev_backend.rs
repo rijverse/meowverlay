@@ -11,9 +11,9 @@
 //! `pressed` semantics the rest of the app expects. The cursor is relative-accumulated for mice and
 //! absolute-mapped for tablets and touchpads, clamped/scaled to the configured screen resolution.
 //! Wayland does not expose the real pointer position to unprivileged clients, so mouse tracking is
-//! an approximation (raw counts, no pointer acceleration); tablet/touchpad absolute tracking maps
+//! an approximation (raw counts, no pointer acceleration). Tablet/touchpad absolute tracking maps
 //! the device surface onto the screen. (Modern I2C precision touchpads expose a relative "Mouse"
-//! node that stays silent — all motion arrives as absolute multitouch — so reading their absolute
+//! node that stays silent, with all motion arriving as absolute multitouch, so reading their absolute
 //! axes is the only way the cursor moves there at all.)
 
 use super::InputFrame;
@@ -24,11 +24,11 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 // Relative/absolute axis codes from linux/input-event-codes.h. X is axis 0, Y is axis 1 for both
-// REL_* and ABS_*; `get_abs_state()` returns an array indexed by these same codes.
+// REL_* and ABS_*. `get_abs_state()` returns an array indexed by these same codes.
 const AXIS_X: u16 = 0;
 const AXIS_Y: u16 = 1;
 /// `BTN_TOOL_PEN` / `BTN_TOOL_FINGER` (linux/input-event-codes.h). A pen marks a graphics
-/// tablet/stylus; a finger marks a touchpad. Either tool key flags a device whose `ABS_X/ABS_Y` are
+/// tablet/stylus, and a finger marks a touchpad. Either tool key flags a device whose `ABS_X/ABS_Y` are
 /// a screen-mappable pointer position, as opposed to a joystick/gamepad (which also exposes
 /// `ABS_X/ABS_Y` but advertises neither tool key, so it's skipped).
 const BTN_TOOL_PEN: u16 = 0x140;
@@ -104,7 +104,7 @@ impl EvdevInput {
     }
 }
 
-/// Keyboards, mice and tablets all advertise keys and/or pointer axes; everything else (lid
+/// Keyboards, mice and tablets all advertise keys and/or pointer axes. Everything else (lid
 /// switches, power buttons with no usable keys, etc.) we skip so we don't spawn idle threads.
 fn is_input_device(dev: &Device) -> bool {
     dev.supported_keys().is_some()
@@ -112,7 +112,7 @@ fn is_input_device(dev: &Device) -> bool {
         || dev.supported_absolute_axes().is_some()
 }
 
-/// Read the absolute X/Y ranges for a pen tablet or touchpad — devices whose `ABS_X/ABS_Y` map onto
+/// Read the absolute X/Y ranges for a pen tablet or touchpad, devices whose `ABS_X/ABS_Y` map onto
 /// a screen position. `None` for relative mice and keyboards (no absolute axes) and for
 /// joysticks/gamepads (absolute axes but no pointer tool key).
 fn abs_ranges(dev: &Device) -> Option<(AbsRange, AbsRange)> {
@@ -120,7 +120,7 @@ fn abs_ranges(dev: &Device) -> Option<(AbsRange, AbsRange)> {
     if !axes.contains(AbsoluteAxisCode(AXIS_X)) || !axes.contains(AbsoluteAxisCode(AXIS_Y)) {
         return None;
     }
-    // A pen (tablet) or finger (touchpad) tool key marks the absolute axes as a screen pointer; skip
+    // A pen (tablet) or finger (touchpad) tool key marks the absolute axes as a screen pointer, so skip
     // joysticks/gamepads, which also expose ABS_X/ABS_Y but aren't pointers.
     let is_pointer = dev.supported_keys().is_some_and(|keys| {
         keys.contains(KeyCode(BTN_TOOL_PEN)) || keys.contains(KeyCode(BTN_TOOL_FINGER))
@@ -128,7 +128,7 @@ fn abs_ranges(dev: &Device) -> Option<(AbsRange, AbsRange)> {
     if !is_pointer {
         return None;
     }
-    // `get_abs_state` returns the kernel `input_absinfo` array indexed by axis code; we read the
+    // `get_abs_state` returns the kernel `input_absinfo` array indexed by axis code. We read the
     // public `minimum`/`maximum` fields directly.
     let state = dev.get_abs_state().ok()?;
     let x = state[AXIS_X as usize];
@@ -193,7 +193,7 @@ fn reader_loop(mut dev: Device, shared: Arc<Mutex<Shared>>, abs: Option<(AbsRang
 }
 
 /// Map a Linux `KEY_*` / `BTN_*` code (linux/input-event-codes.h) to the numeric VK/JS code used in
-/// config files — the same numbers `keycodes::keycode_to_vk` produces, so evdev and the X11 fallback
+/// config files, the same numbers `keycodes::keycode_to_vk` produces, so evdev and the X11 fallback
 /// bind identically. Returns `None` for codes we don't bind.
 fn evdev_code_to_vk(code: u16) -> Option<u32> {
     Some(match code {

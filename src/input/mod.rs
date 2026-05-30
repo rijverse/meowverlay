@@ -4,7 +4,7 @@
 //! * **Linux** uses [`evdev_backend`] (`/dev/input/event*`), which works identically under X11 and
 //!   Wayland. It is required because Wayland deliberately hides global keyboard state and the
 //!   pointer from X11 clients, so the `device_query` (Xlib) path below sees nothing under a Wayland
-//!   session. Reading evdev needs membership of the `input` group (the usual desktop default); if no
+//!   session. Reading evdev needs membership of the `input` group (the usual desktop default). If no
 //!   device can be opened we fall back to `device_query` and print a hint.
 //! * **Windows / macOS** keep `device_query`. On macOS the user must grant Accessibility permission.
 //!
@@ -64,7 +64,7 @@ impl GlobalInput {
     }
 
     /// Set the screen resolution used to clamp/scale the cursor. Only the evdev backend needs this
-    /// (it has no absolute pointer to read); for `device_query` it is a no-op.
+    /// (it has no absolute pointer to read). For `device_query` it is a no-op.
     pub fn set_resolution(&self, width: f64, height: f64) {
         match &self.backend {
             #[cfg(target_os = "linux")]
