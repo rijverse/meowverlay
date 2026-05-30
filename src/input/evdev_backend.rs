@@ -9,9 +9,12 @@
 //! One blocking reader thread per device feeds a shared snapshot that `poll()` copies each frame.
 //! Keys are tracked as press/release edges into a held-set, which reproduces the level-based
 //! `pressed` semantics the rest of the app expects. The cursor is relative-accumulated for mice and
-//! absolute-mapped for tablets, clamped/scaled to the configured screen resolution. Wayland does not
-//! expose the real pointer position to unprivileged clients, so mouse tracking is an approximation
-//! (raw counts, no pointer acceleration), while tablet (absolute) tracking is exact.
+//! absolute-mapped for tablets and touchpads, clamped/scaled to the configured screen resolution.
+//! Wayland does not expose the real pointer position to unprivileged clients, so mouse tracking is
+//! an approximation (raw counts, no pointer acceleration); tablet/touchpad absolute tracking maps
+//! the device surface onto the screen. (Modern I2C precision touchpads expose a relative "Mouse"
+//! node that stays silent — all motion arrives as absolute multitouch — so reading their absolute
+//! axes is the only way the cursor moves there at all.)
 
 use super::InputFrame;
 use crate::keycodes::{MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT};
@@ -24,10 +27,12 @@ use std::thread;
 // REL_* and ABS_*; `get_abs_state()` returns an array indexed by these same codes.
 const AXIS_X: u16 = 0;
 const AXIS_Y: u16 = 1;
-/// `BTN_TOOL_PEN` (linux/input-event-codes.h). Its presence marks a graphics tablet/stylus, which
-/// reports screen-mapped absolute coordinates. Touchpads also expose `ABS_X/ABS_Y`, but those are
-/// raw finger positions on the pad (not the cursor), so we only honour absolute axes on pen devices.
+/// `BTN_TOOL_PEN` / `BTN_TOOL_FINGER` (linux/input-event-codes.h). A pen marks a graphics
+/// tablet/stylus; a finger marks a touchpad. Either tool key flags a device whose `ABS_X/ABS_Y` are
+/// a screen-mappable pointer position, as opposed to a joystick/gamepad (which also exposes
+/// `ABS_X/ABS_Y` but advertises neither tool key, so it's skipped).
 const BTN_TOOL_PEN: u16 = 0x140;
+const BTN_TOOL_FINGER: u16 = 0x145;
 
 /// Cursor position and the resolution used to clamp/scale it, all in screen-pixel space.
 struct Shared {
@@ -107,19 +112,20 @@ fn is_input_device(dev: &Device) -> bool {
         || dev.supported_absolute_axes().is_some()
 }
 
-/// Read the absolute X/Y ranges for a pen tablet. `None` for relative mice, keyboards, and
-/// touchpads (whose absolute axes are raw finger positions, not the cursor — their companion
-/// relative "mouse" node drives the paw instead).
+/// Read the absolute X/Y ranges for a pen tablet or touchpad — devices whose `ABS_X/ABS_Y` map onto
+/// a screen position. `None` for relative mice and keyboards (no absolute axes) and for
+/// joysticks/gamepads (absolute axes but no pointer tool key).
 fn abs_ranges(dev: &Device) -> Option<(AbsRange, AbsRange)> {
     let axes = dev.supported_absolute_axes()?;
     if !axes.contains(AbsoluteAxisCode(AXIS_X)) || !axes.contains(AbsoluteAxisCode(AXIS_Y)) {
         return None;
     }
-    // Only a stylus device maps absolute coordinates to screen position; skip touchpads/joysticks.
-    let is_pen = dev
-        .supported_keys()
-        .is_some_and(|keys| keys.contains(KeyCode(BTN_TOOL_PEN)));
-    if !is_pen {
+    // A pen (tablet) or finger (touchpad) tool key marks the absolute axes as a screen pointer; skip
+    // joysticks/gamepads, which also expose ABS_X/ABS_Y but aren't pointers.
+    let is_pointer = dev.supported_keys().is_some_and(|keys| {
+        keys.contains(KeyCode(BTN_TOOL_PEN)) || keys.contains(KeyCode(BTN_TOOL_FINGER))
+    });
+    if !is_pointer {
         return None;
     }
     // `get_abs_state` returns the kernel `input_absinfo` array indexed by axis code; we read the
