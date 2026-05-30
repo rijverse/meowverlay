@@ -26,7 +26,11 @@ pub fn draw(frame: &Frame) {
         "catch_right"
     } else if let Some(code) = fallback {
         // Any unbound key drives left/right movement by key-code parity.
-        if code % 2 == 0 { "catch_left" } else { "catch_right" }
+        if code % 2 == 0 {
+            "catch_left"
+        } else {
+            "catch_right"
+        }
     } else {
         "catch_up"
     };
