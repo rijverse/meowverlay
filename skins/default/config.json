@@ -104,6 +104,7 @@
       228.0
     ]
   },
+  "cursorSmoothing": 0.045,
   "custom": {
     "background": "img/osu/mousebg.png",
     "keyContainers": [],
