@@ -159,7 +159,7 @@ fn bind_row(app: &mut MeowApp, ui: &mut egui::Ui, pressed: &HashSet<u32>, label:
         {
             app.start_binding(kind, pressed, false);
         }
-        // Mania columns are single-key; every other action supports multiple keys per the
+        // Mania columns are single-key, and every other action supports multiple keys per the
         // bongocat-osu format, so offer an "add another key" capture that appends.
         if !matches!(kind, Bind::ManiaColumn(_))
             && ui

@@ -14,7 +14,7 @@ pub const MOUSE_MIDDLE: u32 = 4;
 ///
 /// Covers every `Keycode` in `device_query` 4.x. The enum is not `#[non_exhaustive]`, so any new
 /// variant arrives only via a major-version bump and will surface here as a compile error to handle
-/// explicitly — preferable to silently mapping it to an unbindable 0.
+/// explicitly, which is preferable to silently mapping it to an unbindable 0.
 pub fn keycode_to_vk(key: &Keycode) -> u32 {
     use Keycode::*;
     match key {
@@ -106,7 +106,7 @@ pub fn keycode_to_vk(key: &Keycode) -> u32 {
         F20 => 131,
 
         // Super / Meta / Command (left & right collapse, matching VK_LWIN/VK_RWIN).
-        // device_query exposes these under several platform names; treat them all as the OS key.
+        // device_query exposes these under several platform names, and they are all treated as the OS key.
         Command | LMeta => 91,
         RCommand | RMeta => 92,
         // macOS Option is the Alt key.

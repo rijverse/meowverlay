@@ -32,7 +32,7 @@ fn set_codes(target: &mut Vec<u32>, code: u32, append: bool) {
 /// cosmetic, so 60 is plenty smooth.
 const ACTIVE_FPS: f32 = 60.0;
 /// Repaint cap when fully idle. Input is still polled at this rate, so the worst-case lag before the
-/// paw reacts after a pause is ~1/IDLE_FPS — imperceptible for a cosmetic overlay, and it roughly
+/// paw reacts after a pause is ~1/IDLE_FPS, which is imperceptible for a cosmetic overlay, and it roughly
 /// halves idle GPU/CPU versus rendering flat-out.
 const IDLE_FPS: f32 = 30.0;
 
@@ -103,7 +103,7 @@ impl MeowApp {
         };
         if let Some(err) = config_error {
             app.toast(format!(
-                "⚠ Using defaults — couldn't parse config.json: {err}"
+                "⚠ Using defaults: couldn't parse config.json: {err}"
             ));
         }
         app
@@ -127,7 +127,7 @@ impl MeowApp {
                 self.resize_pending = true;
                 match err {
                     Some(e) => self.toast(format!(
-                        "⚠ {name}: using defaults — couldn't parse config.json: {e}"
+                        "⚠ {name}: using defaults, couldn't parse config.json: {e}"
                     )),
                     None => self.toast(format!("Loaded skin: {name}")),
                 }
@@ -137,7 +137,7 @@ impl MeowApp {
     }
 
     pub(crate) fn save_config(&mut self) {
-        // Never clobber a config we couldn't parse — the in-memory copy is all-defaults and would
+        // Never clobber a config we couldn't parse, as the in-memory copy is all-defaults and would
         // destroy the user's real settings. Make them fix or remove the file first.
         if let Some(err) = self.skin.config_error.clone() {
             self.toast(format!(
@@ -164,7 +164,7 @@ impl MeowApp {
     }
 
     /// Begin capturing a key for `kind`. With `append`, the captured key is *added* to the action's
-    /// key list (multi-key support); otherwise it replaces the list.
+    /// key list (multi-key support), otherwise it replaces the list.
     pub(crate) fn start_binding(&mut self, kind: Bind, pressed: &HashSet<u32>, append: bool) {
         self.binding = Some(kind);
         self.binding_append = append;
@@ -267,7 +267,7 @@ impl eframe::App for MeowApp {
         let ctx = ui.ctx().clone();
 
         let input = self.input.poll();
-        // While capturing a rebind, route input to the binder only — otherwise the Ctrl+Shift+L
+        // While capturing a rebind, route input to the binder only, otherwise the Ctrl+Shift+L
         // used to reach a bind would also toggle the lock mid-capture.
         if self.binding.is_some() {
             self.handle_binding(&input.pressed);
@@ -285,7 +285,7 @@ impl eframe::App for MeowApp {
         // convention). device_query reports virtual-desktop pixels spanning *all* monitors, so
         // dividing by a single egui-reported monitor pinned the paw to an edge on secondary screens
         // and skewed under HiDPI. Using config.resolution keeps the mapping deterministic and
-        // user-tunable; set it to your play resolution if the paw doesn't track edge-to-edge.
+        // user-tunable. Set it to your play resolution if the paw doesn't track edge-to-edge.
         let res = &self.skin.config.resolution;
         let target = (
             (input.cursor.0 as f32 / (res.width as f32).max(1.0)).clamp(0.0, 1.0),
@@ -293,8 +293,8 @@ impl eframe::App for MeowApp {
         );
 
         // Ease the rendered cursor toward the raw target. `alpha = 1 - e^(-dt/tau)` makes the
-        // smoothing frame-rate independent; `stable_dt` is egui's spike-clamped frame time. The tau
-        // (seconds) comes from the skin config slider; tau <= 0 means "off" (snap to the raw poll).
+        // smoothing frame-rate independent, where `stable_dt` is egui's spike-clamped frame time. The tau
+        // (seconds) comes from the skin config slider. A tau <= 0 means "off" (snap to the raw poll).
         let tau = self.skin.config.cursor_smoothing;
         let dt = ctx.input(|i| i.stable_dt);
         let cursor_norm = match self.cursor_smooth {
@@ -341,7 +341,7 @@ impl eframe::App for MeowApp {
 
         self.draw_toast(&ctx);
 
-        // Adaptive repaint cap. Stay at 60fps while anything moves; otherwise idle at a lower rate
+        // Adaptive repaint cap. Stay at 60fps while anything moves, otherwise idle at a lower rate
         // that still polls input promptly. (We drive our own clock since global input is polled, not
         // event-driven, so egui won't wake us on key/mouse activity by itself.)
         let still_easing =

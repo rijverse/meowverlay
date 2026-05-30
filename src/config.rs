@@ -245,12 +245,12 @@ pub struct Config {
     #[serde(rename = "mousePaw", default)]
     pub mouse_paw: MousePaw,
 
-    /// Meowverlay-specific: cursor smoothing time constant (seconds). 0 = off (snap to raw poll);
-    /// larger = smoother but laggier. Not part of `bongocat-osu`; preserved on save.
+    /// Meowverlay-specific: cursor smoothing time constant (seconds). 0 = off (snap to raw poll),
+    /// larger = smoother but laggier. Not part of `bongocat-osu`, and is preserved on save.
     #[serde(rename = "cursorSmoothing", default = "default_cursor_smoothing")]
     pub cursor_smoothing: f32,
 
-    /// Any extra top-level keys we don't model (e.g. `"custom"`) — preserved across save.
+    /// Any extra top-level keys we don't model (e.g. `"custom"`), which are preserved across save.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
 }

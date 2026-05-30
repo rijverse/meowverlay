@@ -1,6 +1,6 @@
 //! Canvas rendering. Ports the four `draw*` routines from the previous TypeScript Canvas code to
 //! the egui `Painter`. All sprite coordinates are in "skin pixels" (the native size of the skin's
-//! background image); [`Canvas`] maps those into on-screen points and handles the left-handed mirror.
+//! background image), while [`Canvas`] maps those into on-screen points and handles the left-handed mirror.
 
 mod catch;
 mod mania;

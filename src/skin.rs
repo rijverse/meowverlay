@@ -119,7 +119,7 @@ impl Skin {
     /// Load a skin's config and all available sprites into GPU textures.
     ///
     /// Returns `Err` only when the skin directory itself is missing, so the caller can fall back to
-    /// the default skin. A missing `config.json` loads defaults silently; a *malformed* one loads
+    /// the default skin. A missing `config.json` loads defaults silently, while a *malformed* one loads
     /// defaults but records `config_error` so we never silently overwrite the user's file.
     pub fn load(ctx: &egui::Context, skins_dir: &Path, name: &str) -> Result<Self> {
         let skin_dir = skins_dir.join(name);
@@ -171,7 +171,7 @@ fn load_texture(ctx: &egui::Context, key: &str, path: &Path) -> Result<egui::Tex
 pub fn probe_canvas_size(skins_dir: &Path, name: &str) -> egui::Vec2 {
     let dir = skins_dir.join(name);
     // Consult the config so the window opens at the size of the *configured* mode's background,
-    // not always the standard one. A missing/malformed config just falls back to defaults here;
+    // not always the standard one. A missing/malformed config just falls back to defaults here,
     // the in-app load surfaces parse errors.
     let config = Config::load(&dir.join("config.json")).unwrap_or_default();
     let primary = match config.mode {

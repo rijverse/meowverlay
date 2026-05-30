@@ -6,25 +6,25 @@ A fast, native **Bongo Cat / input overlay** for osu!, inspired by
 
 Meowverlay is a single self-contained binary written in **Rust** with
 [`egui`/`eframe`](https://github.com/emilk/egui). It renders a transparent, borderless,
-always-on-top overlay that reacts to your **real** global keyboard and mouse — and it tracks the
+always-on-top overlay that reacts to your **real** global keyboard and mouse, and it tracks the
 *actual* cursor position (no drift) using a polling approach that needs **no special permissions and
 no `input` group**.
 
-- 🪶 **Native & lightweight** — one binary, GPU-accelerated, no web stack / no Electron.
-- 🖱️ **Accurate global input** — true absolute cursor + global key state via
-  [`device_query`](https://crates.io/crates/device_query); works while another window is focused.
-- 🎮 **All osu! modes** — Standard, Taiko, Catch the Beat, and Mania (4K & 7K).
-- 🎨 **Drop-in skin compatibility** — load any `bongocat-osu` skin; the window auto-sizes to it.
-- ⚙️ **In-app settings** — switch skin/mode, rebind keys, toggle left-handed / mouse-vs-tablet /
+- 🪶 **Native & lightweight** - one binary, GPU-accelerated, no web stack / no Electron.
+- 🖱️ **Accurate global input** - true absolute cursor + global key state via
+  [`device_query`](https://crates.io/crates/device_query), which works while another window is focused.
+- 🎮 **All osu! modes** - Standard, Taiko, Catch the Beat, and Mania (4K & 7K).
+- 🎨 **Drop-in skin compatibility** - load any `bongocat-osu` skin, and the window auto-sizes to it.
+- ⚙️ **In-app settings** - switch skin/mode, rebind keys, toggle left-handed / mouse-vs-tablet /
   smoke, all from an egui panel. Lock the overlay to make it click-through.
-- 💻 **Cross-platform** — Windows, macOS, and Linux (X11 / XWayland).
+- 💻 **Cross-platform** - Windows, macOS, and Linux (X11 / XWayland).
 
 ---
 
 ## 🚀 Build & Run
 
-You only need a [Rust toolchain](https://rustup.rs) (stable, **1.92+** — `egui 0.34` requires it;
-run `rustup update stable` if your `rustc` is older).
+You only need a [Rust toolchain](https://rustup.rs) (stable, **1.92+**, as `egui 0.34` requires it.
+Run `rustup update stable` if your `rustc` is older).
 
 ```bash
 cargo run            # debug
@@ -34,14 +34,14 @@ cargo run --release  # optimized
 A transparent overlay window appears, sized to the default skin, with the settings panel open.
 
 > **First run looks "dead"?** Run the input diagnostic to confirm global capture works on your
-> machine — move the mouse and press keys while it runs:
+> machine by moving the mouse and pressing keys while it runs:
 > ```bash
 > cargo run --example input_probe
 > ```
 > If the cursor coordinates change and pressed keys are listed, you're good.
 
 ### Platform notes
-- **Linux:** Works on X11 and XWayland out of the box — **no `input` group, no `sudo`, no `evdev`
+- **Linux:** Works on X11 and XWayland out of the box with **no `input` group, no `sudo`, no `evdev`
   setup**. Click-through (lock mode) is solid on most setups but is best-effort on some
   Wayland compositors (a `winit` limitation).
 - **macOS:** The OS requires **Accessibility permission** for global input capture. Grant it under
@@ -54,7 +54,7 @@ A transparent overlay window appears, sized to the default skin, with the settin
 
 - **Move it:** drag the cat (when unlocked).
 - **Open settings:** the ⚙ button (top-left) / the settings window.
-- **Rebind a key:** click a key button in settings, then press the key you want — `Esc` cancels.
+- **Rebind a key:** click a key button in settings, then press the key you want (`Esc` cancels).
 - **Bind multiple keys to one action:** click ➕ next to a binding to *add* another key (the
   bongocat-osu format allows several keys per action). Mania columns stay single-key.
 - **Save:** writes back to that skin's `config.json` (stays `bongocat-osu`-compatible).
@@ -79,7 +79,7 @@ skins/
         └── mania/          # Mania (4K / 7K) sprites
 ```
 
-The layout and `config.json` format are **drop-in compatible with `bongocat-osu` skins** — extract
+The layout and `config.json` format are **drop-in compatible with `bongocat-osu` skins. Extract
 any existing Bongo Cat skin into `skins/<name>/` and pick it from the skin selector. The overlay
 window resizes itself to the skin's background dimensions automatically. Keybindings use the same
 numeric key codes as `bongocat-osu` (e.g. `A`=65, `Z`=90).
@@ -109,7 +109,7 @@ skins/                      drop-in bongocat-osu skins
 ```
 
 Input is polled once per frame (egui repaints continuously), which is simple and robust and gives
-the true cursor position the C++ references use — replacing the old relative-delta accumulation that
+the true cursor position the C++ references use, replacing the old relative-delta accumulation that
 drifted from screen center.
 
 ---
@@ -127,6 +127,6 @@ rewrite"*).
 Meowverlay's own code is licensed under the **[Apache License 2.0](LICENSE)**.
 
 The bundled default skin artwork under `skins/default/img/**` is derived from
-[`kuroni/bongocat-osu`](https://github.com/kuroni/bongocat-osu) (MIT License); the `config.json`
+[`kuroni/bongocat-osu`](https://github.com/kuroni/bongocat-osu) (MIT License), and the `config.json`
 format and numeric key-code convention come from the same project. See [`NOTICE`](NOTICE) for the
-full attribution — keep it intact when redistributing the bundled assets.
+full attribution, and keep it intact when redistributing the bundled assets.

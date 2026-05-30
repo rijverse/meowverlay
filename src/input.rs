@@ -4,7 +4,7 @@
 //! `XQueryPointer`) and needs no special permissions or `input`-group membership. On macOS the
 //! user must grant Accessibility permission for global key reads to work.
 //!
-//! We poll once per rendered frame instead of using an event hook — simple and robust, and egui
+//! We poll once per rendered frame instead of using an event hook, which is simple and robust, and egui
 //! repaints continuously for the animation anyway.
 
 use crate::keycodes::{keycode_to_vk, MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT};

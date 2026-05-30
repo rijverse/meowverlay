@@ -10,7 +10,7 @@ Bundled skin assets (skins/default/img/**)
 
 The default skin's artwork is derived from the bongocat-osu project:
 
-    bongocat-osu — https://github.com/kuroni/bongocat-osu
+    bongocat-osu - https://github.com/kuroni/bongocat-osu
     Licensed under the MIT License.
 
 The same project also defines the `config.json` format and the numeric key-code

@@ -2,7 +2,7 @@
 //!
 //! Run with `cargo run --example input_probe`, then **move the mouse and press keys** for ~12s.
 //! It prints only when the state *changes*, so you can see whether real input is detected. If
-//! coordinates and pressed keys update as you move/type, Meowverlay's input path is healthy here —
+//! coordinates and pressed keys update as you move/type, Meowverlay's input path is healthy here, and
 //! no `input` group or elevated permissions required.
 
 use device_query::{DeviceQuery, DeviceState};
@@ -13,7 +13,7 @@ use std::{
 
 fn main() {
     let device = DeviceState::new();
-    println!("Probing global input for ~12s — MOVE THE MOUSE and PRESS KEYS now.\n");
+    println!("Probing global input for ~12s: MOVE THE MOUSE and PRESS KEYS now.\n");
     let start = Instant::now();
     let mut last = String::new();
     let mut changes = 0u32;
