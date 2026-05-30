@@ -2,8 +2,10 @@
 name = "meowverlay"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.92"
 description = "A native Bongo Cat / Pengu input overlay for osu!, inspired by bongocat-osu"
 authors = ["Meowverlay contributors"]
+license = "Apache-2.0"
 
 [[bin]]
 name = "meowverlay"

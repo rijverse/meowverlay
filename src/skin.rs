@@ -58,7 +58,33 @@ const IMAGE_PATHS: &[(&str, &str)] = &[
 
 pub struct Skin {
     pub config: Config,
+    /// `Some(msg)` when the skin's `config.json` existed but failed to parse. The app loads defaults
+    /// in that case but must *not* silently overwrite the user's file (see `MeowApp::save_config`).
+    pub config_error: Option<String>,
     textures: HashMap<&'static str, egui::TextureHandle>,
+}
+
+/// The background texture key for the given mode, honouring the osu! mouse/tablet and mania 4K/7K
+/// sub-selections. Mirrors the per-mode draw routines so the window sizes to what actually renders.
+fn mode_bg_key(config: &Config) -> &'static str {
+    match config.mode {
+        2 => "taiko_bg",
+        3 => "catch_bg",
+        4 => {
+            if config.mania.four_k {
+                "mania_bg_4K"
+            } else {
+                "mania_bg_7K"
+            }
+        }
+        _ => {
+            if config.osu.mouse {
+                "mousebg"
+            } else {
+                "tabletbg"
+            }
+        }
+    }
 }
 
 impl Skin {
@@ -66,10 +92,20 @@ impl Skin {
         self.textures.get(key)
     }
 
-    /// The overlay canvas size, derived from the standard-mode background image.
+    /// The overlay canvas size, derived from the *current mode's* background image so swapping modes
+    /// (or skins whose Taiko/Catch/Mania backgrounds differ in size) resizes the window correctly.
     /// Falls back through the other mode backgrounds, then to the classic 612x354.
     pub fn canvas_size(&self) -> egui::Vec2 {
-        for key in ["mousebg", "tabletbg", "taiko_bg", "catch_bg", "mania_bg_4K", "mania_bg_7K"] {
+        let primary = mode_bg_key(&self.config);
+        for key in [
+            primary,
+            "mousebg",
+            "tabletbg",
+            "taiko_bg",
+            "catch_bg",
+            "mania_bg_4K",
+            "mania_bg_7K",
+        ] {
             if let Some(tex) = self.textures.get(key) {
                 let s = tex.size();
                 if s[0] > 1 && s[1] > 1 {
@@ -81,10 +117,25 @@ impl Skin {
     }
 
     /// Load a skin's config and all available sprites into GPU textures.
+    ///
+    /// Returns `Err` only when the skin directory itself is missing, so the caller can fall back to
+    /// the default skin. A missing `config.json` loads defaults silently; a *malformed* one loads
+    /// defaults but records `config_error` so we never silently overwrite the user's file.
     pub fn load(ctx: &egui::Context, skins_dir: &Path, name: &str) -> Result<Self> {
         let skin_dir = skins_dir.join(name);
-        let config = Config::load(&skin_dir.join("config.json"))
-            .unwrap_or_else(|_| Config::default());
+        if !skin_dir.is_dir() {
+            anyhow::bail!("skin directory not found: {}", skin_dir.display());
+        }
+
+        let config_path = skin_dir.join("config.json");
+        let (config, config_error) = if config_path.exists() {
+            match Config::load(&config_path) {
+                Ok(c) => (c, None),
+                Err(e) => (Config::default(), Some(format!("{e:#}"))),
+            }
+        } else {
+            (Config::default(), None)
+        };
 
         let mut textures = HashMap::new();
         for (key, rel) in IMAGE_PATHS {
@@ -97,7 +148,11 @@ impl Skin {
             }
         }
 
-        Ok(Self { config, textures })
+        Ok(Self {
+            config,
+            config_error,
+            textures,
+        })
     }
 }
 
@@ -115,7 +170,30 @@ fn load_texture(ctx: &egui::Context, key: &str, path: &Path) -> Result<egui::Tex
 /// the correct size before the egui context exists.
 pub fn probe_canvas_size(skins_dir: &Path, name: &str) -> egui::Vec2 {
     let dir = skins_dir.join(name);
+    // Consult the config so the window opens at the size of the *configured* mode's background,
+    // not always the standard one. A missing/malformed config just falls back to defaults here;
+    // the in-app load surfaces parse errors.
+    let config = Config::load(&dir.join("config.json")).unwrap_or_default();
+    let primary = match config.mode {
+        2 => "img/taiko/bg.png",
+        3 => "img/catch/bg.png",
+        4 => {
+            if config.mania.four_k {
+                "img/mania/4K/bg.png"
+            } else {
+                "img/mania/7K/bg.png"
+            }
+        }
+        _ => {
+            if config.osu.mouse {
+                "img/osu/mousebg.png"
+            } else {
+                "img/osu/tabletbg.png"
+            }
+        }
+    };
     for rel in [
+        primary,
         "img/osu/mousebg.png",
         "img/osu/tabletbg.png",
         "img/taiko/bg.png",

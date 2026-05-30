@@ -24,13 +24,15 @@ pub fn show(ctx: &egui::Context, app: &mut MeowApp, pressed: &HashSet<u32>) {
         .open(&mut open)
         .default_pos(egui::pos2(8.0, 8.0))
         .show(ctx, |ui| {
-            egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
-                general_section(ctx, app, ui);
-                ui.separator();
-                bindings_section(app, ui, pressed);
-                ui.separator();
-                footer(ctx, app, ui);
-            });
+            egui::ScrollArea::vertical()
+                .max_height(320.0)
+                .show(ui, |ui| {
+                    general_section(ctx, app, ui);
+                    ui.separator();
+                    bindings_section(app, ui, pressed);
+                    ui.separator();
+                    footer(ctx, app, ui);
+                });
         });
     if !open {
         app.settings_open = false;
@@ -52,27 +54,37 @@ fn general_section(ctx: &egui::Context, app: &mut MeowApp, ui: &mut egui::Ui) {
         app.reload_skin(ctx, &chosen);
     }
 
-    // Game mode.
-    let cfg = &mut app.skin.config;
-    egui::ComboBox::from_label("Mode")
-        .selected_text(mode_label(cfg.mode))
-        .show_ui(ui, |ui| {
-            ui.selectable_value(&mut cfg.mode, 1, "Standard (osu!)");
-            ui.selectable_value(&mut cfg.mode, 2, "Taiko");
-            ui.selectable_value(&mut cfg.mode, 3, "Catch the Beat");
-            ui.selectable_value(&mut cfg.mode, 4, "Mania");
-        });
+    // Game mode + toggles. Changing the mode, or the osu! mouse/tablet choice, can change the
+    // background dimensions, so request a window resize when either flips.
+    let resize = {
+        let cfg = &mut app.skin.config;
+        let old_mode = cfg.mode;
+        let old_mouse = cfg.osu.mouse;
+        egui::ComboBox::from_label("Mode")
+            .selected_text(mode_label(cfg.mode))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut cfg.mode, 1, "Standard (osu!)");
+                ui.selectable_value(&mut cfg.mode, 2, "Taiko");
+                ui.selectable_value(&mut cfg.mode, 3, "Catch the Beat");
+                ui.selectable_value(&mut cfg.mode, 4, "Mania");
+            });
 
-    ui.checkbox(&mut cfg.decoration.left_handed, "Left-handed layout");
-    ui.checkbox(&mut cfg.osu.mouse, "Use mouse (vs. tablet)");
-    ui.checkbox(&mut cfg.osu.toggle_smoke, "Toggle smoke (vs. hold)");
+        ui.checkbox(&mut cfg.decoration.left_handed, "Left-handed layout");
+        ui.checkbox(&mut cfg.osu.mouse, "Use mouse (vs. tablet)");
+        ui.checkbox(&mut cfg.osu.toggle_smoke, "Toggle smoke (vs. hold)");
 
-    ui.add(
-        egui::Slider::new(&mut cfg.cursor_smoothing, 0.0..=0.2)
-            .text("Cursor smoothing")
-            .custom_formatter(|v, _| if v <= 0.0 { "off".to_owned() } else { format!("{v:.3} s") }),
-    )
-    .on_hover_text("Easing time for cursor tracking. 0 = instant (raw poll); higher = smoother but laggier.");
+        ui.add(
+            egui::Slider::new(&mut cfg.cursor_smoothing, 0.0..=0.2)
+                .text("Cursor smoothing")
+                .custom_formatter(|v, _| if v <= 0.0 { "off".to_owned() } else { format!("{v:.3} s") }),
+        )
+        .on_hover_text("Easing time for cursor tracking. 0 = instant (raw poll); higher = smoother but laggier.");
+
+        cfg.mode != old_mode || cfg.osu.mouse != old_mouse
+    };
+    if resize {
+        app.request_resize();
+    }
 }
 
 fn bindings_section(app: &mut MeowApp, ui: &mut egui::Ui, pressed: &HashSet<u32>) {
@@ -82,7 +94,13 @@ fn bindings_section(app: &mut MeowApp, ui: &mut egui::Ui, pressed: &HashSet<u32>
             ui.heading("Taiko");
             bind_row(app, ui, pressed, "Left Rim (Don)", Bind::TaikoLeftRim);
             bind_row(app, ui, pressed, "Left Centre (Ka)", Bind::TaikoLeftCentre);
-            bind_row(app, ui, pressed, "Right Centre (Ka)", Bind::TaikoRightCentre);
+            bind_row(
+                app,
+                ui,
+                pressed,
+                "Right Centre (Ka)",
+                Bind::TaikoRightCentre,
+            );
             bind_row(app, ui, pressed, "Right Rim (Don)", Bind::TaikoRightRim);
         }
         3 => {
@@ -101,10 +119,18 @@ fn bindings_section(app: &mut MeowApp, ui: &mut egui::Ui, pressed: &HashSet<u32>
             });
             if is_4k != four_k {
                 app.skin.config.mania.four_k = is_4k;
+                // 4K and 7K can use differently-sized backgrounds.
+                app.request_resize();
             }
             let count = if app.skin.config.mania.four_k { 4 } else { 7 };
             for i in 0..count {
-                bind_row(app, ui, pressed, &format!("Column {}", i + 1), Bind::ManiaColumn(i));
+                bind_row(
+                    app,
+                    ui,
+                    pressed,
+                    &format!("Column {}", i + 1),
+                    Bind::ManiaColumn(i),
+                );
             }
         }
         _ => {
@@ -119,11 +145,29 @@ fn bindings_section(app: &mut MeowApp, ui: &mut egui::Ui, pressed: &HashSet<u32>
 
 fn bind_row(app: &mut MeowApp, ui: &mut egui::Ui, pressed: &HashSet<u32>, label: &str, kind: Bind) {
     let is_active = app.binding == Some(kind);
-    let text = if is_active { "Press a key…".to_string() } else { current_label(app, kind) };
+    let text = if is_active {
+        "Press a key…".to_string()
+    } else {
+        current_label(app, kind)
+    };
     ui.horizontal(|ui| {
         ui.label(label);
-        if ui.button(text).clicked() {
-            app.start_binding(kind, pressed);
+        if ui
+            .button(text)
+            .on_hover_text("Click to rebind (replaces current keys)")
+            .clicked()
+        {
+            app.start_binding(kind, pressed, false);
+        }
+        // Mania columns are single-key; every other action supports multiple keys per the
+        // bongocat-osu format, so offer an "add another key" capture that appends.
+        if !matches!(kind, Bind::ManiaColumn(_))
+            && ui
+                .small_button("➕")
+                .on_hover_text("Add another key")
+                .clicked()
+        {
+            app.start_binding(kind, pressed, true);
         }
     });
 }
@@ -143,8 +187,15 @@ fn current_label(app: &MeowApp, kind: Bind) -> String {
         Bind::CatchRight => &cfg.catch_cfg.right,
         Bind::CatchDash => &cfg.catch_cfg.dash,
         Bind::ManiaColumn(i) => {
-            let arr = if cfg.mania.four_k { &cfg.mania.key4k } else { &cfg.mania.key7k };
-            return arr.get(i).map(|c| vk_to_label(*c)).unwrap_or_else(|| "None".into());
+            let arr = if cfg.mania.four_k {
+                &cfg.mania.key4k
+            } else {
+                &cfg.mania.key7k
+            };
+            return arr
+                .get(i)
+                .map(|c| vk_to_label(*c))
+                .unwrap_or_else(|| "None".into());
         }
     };
     codes_label(codes)
@@ -154,7 +205,11 @@ fn codes_label(codes: &[u32]) -> String {
     if codes.is_empty() {
         "None".to_string()
     } else {
-        codes.iter().map(|c| vk_to_label(*c)).collect::<Vec<_>>().join(" / ")
+        codes
+            .iter()
+            .map(|c| vk_to_label(*c))
+            .collect::<Vec<_>>()
+            .join(" / ")
     }
 }
 

@@ -6,7 +6,10 @@
 //! no `input` group or elevated permissions required.
 
 use device_query::{DeviceQuery, DeviceState};
-use std::{thread, time::{Duration, Instant}};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 fn main() {
     let device = DeviceState::new();
@@ -17,7 +20,10 @@ fn main() {
     while start.elapsed() < Duration::from_secs(12) {
         let mouse = device.get_mouse();
         let keys = device.get_keys();
-        let now = format!("cursor={:?} buttons={:?} keys={:?}", mouse.coords, mouse.button_pressed, keys);
+        let now = format!(
+            "cursor={:?} buttons={:?} keys={:?}",
+            mouse.coords, mouse.button_pressed, keys
+        );
         if now != last {
             println!("[{:>5.1}s] {now}", start.elapsed().as_secs_f32());
             last = now;

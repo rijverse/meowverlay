@@ -55,6 +55,8 @@ A transparent overlay window appears, sized to the default skin, with the settin
 - **Move it:** drag the cat (when unlocked).
 - **Open settings:** the ⚙ button (top-left) / the settings window.
 - **Rebind a key:** click a key button in settings, then press the key you want — `Esc` cancels.
+- **Bind multiple keys to one action:** click ➕ next to a binding to *add* another key (the
+  bongocat-osu format allows several keys per action). Mania columns stay single-key.
 - **Save:** writes back to that skin's `config.json` (stays `bongocat-osu`-compatible).
 - **Lock / click-through:** press **`Ctrl + Shift + L`** (or the 🔒 Lock button). Locking hides the
   settings and lets clicks pass through to the apps behind the overlay. Press the hotkey again to
@@ -117,3 +119,14 @@ drifted from screen center.
 This is a ground-up **native Rust rewrite**. The previous Tauri v1 + TypeScript/Canvas version is
 preserved in git history (commit *"Snapshot: Tauri v1 + TypeScript/Canvas version before native Rust
 rewrite"*).
+
+---
+
+## 📄 License
+
+Meowverlay's own code is licensed under the **[Apache License 2.0](LICENSE)**.
+
+The bundled default skin artwork under `skins/default/img/**` is derived from
+[`kuroni/bongocat-osu`](https://github.com/kuroni/bongocat-osu) (MIT License); the `config.json`
+format and numeric key-code convention come from the same project. See [`NOTICE`](NOTICE) for the
+full attribution — keep it intact when redistributing the bundled assets.

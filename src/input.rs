@@ -26,7 +26,9 @@ pub struct GlobalInput {
 
 impl GlobalInput {
     pub fn new() -> Self {
-        Self { device: DeviceState::new() }
+        Self {
+            device: DeviceState::new(),
+        }
     }
 
     pub fn poll(&self) -> InputFrame {
@@ -51,7 +53,10 @@ impl GlobalInput {
             pressed.insert(MOUSE_MIDDLE);
         }
 
-        InputFrame { pressed, cursor: mouse.coords }
+        InputFrame {
+            pressed,
+            cursor: mouse.coords,
+        }
     }
 }
 

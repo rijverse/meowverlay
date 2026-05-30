@@ -4,13 +4,29 @@ use crate::input::GlobalInput;
 use crate::render::{self, AnimState, Canvas, Frame};
 use crate::skin::{self, Skin};
 use crate::ui;
-use egui::{Color32, Sense, Vec2, ViewportCommand};
+use egui::{Color32, Sense, ViewportCommand};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 /// VK codes for the global lock hotkey: Ctrl + Shift + L.
 const LOCK_COMBO: [u32; 3] = [17, 16, 76];
+
+/// VK codes for the bare modifier keys (Ctrl, Shift, Alt), ignored while capturing a rebind.
+fn is_modifier(code: u32) -> bool {
+    matches!(code, 16..=18)
+}
+
+/// Apply a captured key to an action's key list: append (de-duplicated) or replace.
+fn set_codes(target: &mut Vec<u32>, code: u32, append: bool) {
+    if append {
+        if !target.contains(&code) {
+            target.push(code);
+        }
+    } else {
+        *target = vec![code];
+    }
+}
 
 /// Repaint cap while something is animating (keys held, cursor easing, smoke alive). The overlay is
 /// cosmetic, so 60 is plenty smooth.
@@ -51,6 +67,8 @@ pub struct MeowApp {
     pub(crate) locked: bool,
     pub(crate) settings_open: bool,
     pub(crate) binding: Option<Bind>,
+    /// When the active binding should *add* a key (multi-key) rather than replace the existing list.
+    binding_append: bool,
     binding_baseline: HashSet<u32>,
     lock_hotkey_was_down: bool,
     resize_pending: bool,
@@ -65,7 +83,8 @@ impl MeowApp {
             eprintln!("[meowverlay] failed to load skin '{skin_name}': {e}");
             Skin::load(ctx, &skins_dir, "default").expect("default skin must load")
         });
-        Self {
+        let config_error = skin.config_error.clone();
+        let mut app = Self {
             skins_dir,
             skin_names,
             current_skin: skin_name.to_string(),
@@ -76,11 +95,23 @@ impl MeowApp {
             locked: false,
             settings_open: true,
             binding: None,
+            binding_append: false,
             binding_baseline: HashSet::new(),
             lock_hotkey_was_down: false,
             resize_pending: false,
             toast: None,
+        };
+        if let Some(err) = config_error {
+            app.toast(format!(
+                "⚠ Using defaults — couldn't parse config.json: {err}"
+            ));
         }
+        app
+    }
+
+    /// Request the window to resize to the current skin/mode canvas size on the next frame.
+    pub(crate) fn request_resize(&mut self) {
+        self.resize_pending = true;
     }
 
     pub(crate) fn toast(&mut self, msg: impl Into<String>) {
@@ -90,16 +121,30 @@ impl MeowApp {
     pub(crate) fn reload_skin(&mut self, ctx: &egui::Context, name: &str) {
         match Skin::load(ctx, &self.skins_dir, name) {
             Ok(s) => {
+                let err = s.config_error.clone();
                 self.skin = s;
                 self.current_skin = name.to_string();
                 self.resize_pending = true;
-                self.toast(format!("Loaded skin: {name}"));
+                match err {
+                    Some(e) => self.toast(format!(
+                        "⚠ {name}: using defaults — couldn't parse config.json: {e}"
+                    )),
+                    None => self.toast(format!("Loaded skin: {name}")),
+                }
             }
             Err(e) => self.toast(format!("Failed to load skin: {e}")),
         }
     }
 
     pub(crate) fn save_config(&mut self) {
+        // Never clobber a config we couldn't parse — the in-memory copy is all-defaults and would
+        // destroy the user's real settings. Make them fix or remove the file first.
+        if let Some(err) = self.skin.config_error.clone() {
+            self.toast(format!(
+                "❌ Not saving: config.json didn't parse ({err}). Fix or remove it first."
+            ));
+            return;
+        }
         let path = self.skins_dir.join(&self.current_skin).join("config.json");
         match self.skin.config.save(&path) {
             Ok(()) => self.toast("✔ Configuration saved"),
@@ -118,8 +163,11 @@ impl MeowApp {
         }
     }
 
-    pub(crate) fn start_binding(&mut self, kind: Bind, pressed: &HashSet<u32>) {
+    /// Begin capturing a key for `kind`. With `append`, the captured key is *added* to the action's
+    /// key list (multi-key support); otherwise it replaces the list.
+    pub(crate) fn start_binding(&mut self, kind: Bind, pressed: &HashSet<u32>, append: bool) {
         self.binding = Some(kind);
+        self.binding_append = append;
         self.binding_baseline = pressed.clone();
     }
 
@@ -137,34 +185,47 @@ impl MeowApp {
         let Some(kind) = self.binding else { return };
         // Drop released keys from the baseline so the same key can be re-pressed to bind.
         self.binding_baseline.retain(|k| pressed.contains(k));
-        let Some(&code) = pressed.iter().find(|k| !self.binding_baseline.contains(k)) else {
-            return;
-        };
+        // Ignore bare modifiers while capturing: it lets the user reach a bind via Ctrl/Shift+key
+        // (e.g. the Ctrl+Shift+L lock combo) without the modifier itself being captured.
+        let candidate = pressed
+            .iter()
+            .find(|k| !self.binding_baseline.contains(k) && !is_modifier(**k));
+        let Some(&code) = candidate else { return };
         self.binding = None;
         if code == 27 {
             self.toast("Binding cancelled");
             return;
         }
         self.apply_binding(kind, code);
-        self.toast("✔ Key bound");
+        self.toast(if self.binding_append {
+            "✔ Key added"
+        } else {
+            "✔ Key bound"
+        });
     }
 
     fn apply_binding(&mut self, kind: Bind, code: u32) {
+        let append = self.binding_append;
         let cfg = &mut self.skin.config;
         match kind {
-            Bind::OsuKey1 => cfg.osu.key1 = vec![code],
-            Bind::OsuKey2 => cfg.osu.key2 = vec![code],
-            Bind::OsuSmoke => cfg.osu.smoke = vec![code],
-            Bind::OsuWave => cfg.osu.wave = vec![code],
-            Bind::TaikoLeftRim => cfg.taiko.left_rim = vec![code],
-            Bind::TaikoLeftCentre => cfg.taiko.left_centre = vec![code],
-            Bind::TaikoRightCentre => cfg.taiko.right_centre = vec![code],
-            Bind::TaikoRightRim => cfg.taiko.right_rim = vec![code],
-            Bind::CatchLeft => cfg.catch_cfg.left = vec![code],
-            Bind::CatchRight => cfg.catch_cfg.right = vec![code],
-            Bind::CatchDash => cfg.catch_cfg.dash = vec![code],
+            Bind::OsuKey1 => set_codes(&mut cfg.osu.key1, code, append),
+            Bind::OsuKey2 => set_codes(&mut cfg.osu.key2, code, append),
+            Bind::OsuSmoke => set_codes(&mut cfg.osu.smoke, code, append),
+            Bind::OsuWave => set_codes(&mut cfg.osu.wave, code, append),
+            Bind::TaikoLeftRim => set_codes(&mut cfg.taiko.left_rim, code, append),
+            Bind::TaikoLeftCentre => set_codes(&mut cfg.taiko.left_centre, code, append),
+            Bind::TaikoRightCentre => set_codes(&mut cfg.taiko.right_centre, code, append),
+            Bind::TaikoRightRim => set_codes(&mut cfg.taiko.right_rim, code, append),
+            Bind::CatchLeft => set_codes(&mut cfg.catch_cfg.left, code, append),
+            Bind::CatchRight => set_codes(&mut cfg.catch_cfg.right, code, append),
+            Bind::CatchDash => set_codes(&mut cfg.catch_cfg.dash, code, append),
+            // Mania columns are a single key each (flat array indexed by column), so always replace.
             Bind::ManiaColumn(i) => {
-                let arr = if cfg.mania.four_k { &mut cfg.mania.key4k } else { &mut cfg.mania.key7k };
+                let arr = if cfg.mania.four_k {
+                    &mut cfg.mania.key4k
+                } else {
+                    &mut cfg.mania.key7k
+                };
                 if i < arr.len() {
                     arr[i] = code;
                 }
@@ -173,7 +234,9 @@ impl MeowApp {
     }
 
     fn draw_toast(&mut self, ctx: &egui::Context) {
-        let Some((msg, started)) = &self.toast else { return };
+        let Some((msg, started)) = &self.toast else {
+            return;
+        };
         if started.elapsed().as_secs_f32() > 3.5 {
             self.toast = None;
             return;
@@ -204,8 +267,13 @@ impl eframe::App for MeowApp {
         let ctx = ui.ctx().clone();
 
         let input = self.input.poll();
-        self.handle_hotkey(&input.pressed, &ctx);
-        self.handle_binding(&input.pressed);
+        // While capturing a rebind, route input to the binder only — otherwise the Ctrl+Shift+L
+        // used to reach a bind would also toggle the lock mid-capture.
+        if self.binding.is_some() {
+            self.handle_binding(&input.pressed);
+        } else {
+            self.handle_hotkey(&input.pressed, &ctx);
+        }
 
         // Resize the OS window to the (possibly new) skin canvas size.
         if self.resize_pending {
@@ -213,15 +281,15 @@ impl eframe::App for MeowApp {
             ctx.send_viewport_cmd(ViewportCommand::InnerSize(self.skin.canvas_size()));
         }
 
-        // Normalize the real cursor across the monitor.
-        let monitor = ctx
-            .input(|i| i.viewport().monitor_size)
-            .unwrap_or_else(|| {
-                Vec2::new(self.skin.config.resolution.width as f32, self.skin.config.resolution.height as f32)
-            });
+        // Normalize the real cursor against the configured screen resolution (the bongocat-osu
+        // convention). device_query reports virtual-desktop pixels spanning *all* monitors, so
+        // dividing by a single egui-reported monitor pinned the paw to an edge on secondary screens
+        // and skewed under HiDPI. Using config.resolution keeps the mapping deterministic and
+        // user-tunable; set it to your play resolution if the paw doesn't track edge-to-edge.
+        let res = &self.skin.config.resolution;
         let target = (
-            (input.cursor.0 as f32 / monitor.x.max(1.0)).clamp(0.0, 1.0),
-            (input.cursor.1 as f32 / monitor.y.max(1.0)).clamp(0.0, 1.0),
+            (input.cursor.0 as f32 / (res.width as f32).max(1.0)).clamp(0.0, 1.0),
+            (input.cursor.1 as f32 / (res.height as f32).max(1.0)).clamp(0.0, 1.0),
         );
 
         // Ease the rendered cursor toward the raw target. `alpha = 1 - e^(-dt/tau)` makes the
@@ -262,6 +330,7 @@ impl eframe::App for MeowApp {
             skin,
             pressed: &input.pressed,
             cursor_norm,
+            dt,
         };
         render::draw(&overlay, anim);
 
@@ -275,8 +344,8 @@ impl eframe::App for MeowApp {
         // Adaptive repaint cap. Stay at 60fps while anything moves; otherwise idle at a lower rate
         // that still polls input promptly. (We drive our own clock since global input is polled, not
         // event-driven, so egui won't wake us on key/mouse activity by itself.)
-        let still_easing = (cursor_norm.0 - target.0).abs() > 1e-4
-            || (cursor_norm.1 - target.1).abs() > 1e-4;
+        let still_easing =
+            (cursor_norm.0 - target.0).abs() > 1e-4 || (cursor_norm.1 - target.1).abs() > 1e-4;
         let animating = !input.pressed.is_empty() || !self.anim.smoke.is_empty() || still_easing;
         let fps = if animating { ACTIVE_FPS } else { IDLE_FPS };
         ctx.request_repaint_after(Duration::from_secs_f32(1.0 / fps));

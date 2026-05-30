@@ -2,10 +2,10 @@
 //! the egui `Painter`. All sprite coordinates are in "skin pixels" (the native size of the skin's
 //! background image); [`Canvas`] maps those into on-screen points and handles the left-handed mirror.
 
-mod standard;
-mod taiko;
 mod catch;
 mod mania;
+mod standard;
+mod taiko;
 
 use crate::config::Config;
 use crate::skin::Skin;
@@ -28,13 +28,21 @@ pub struct Canvas {
 impl Canvas {
     pub fn new(rect: Rect, skin_size: Vec2, mirror: bool) -> Self {
         let scale = vec2_div(rect.size(), skin_size);
-        Self { rect, scale, size: skin_size, mirror }
+        Self {
+            rect,
+            scale,
+            size: skin_size,
+            mirror,
+        }
     }
 
     /// Map a skin-space point to an on-screen point.
     fn map(&self, x: f32, y: f32) -> Pos2 {
         let sx = if self.mirror { self.size.x - x } else { x };
-        Pos2::new(self.rect.min.x + sx * self.scale.x, self.rect.min.y + y * self.scale.y)
+        Pos2::new(
+            self.rect.min.x + sx * self.scale.x,
+            self.rect.min.y + y * self.scale.y,
+        )
     }
 
     fn uv_full(&self) -> Rect {
@@ -78,6 +86,8 @@ pub struct AnimState {
     pub smoke: Vec<SmokeParticle>,
     pub smoke_toggled: bool,
     pub smoke_key_was_down: bool,
+    /// Fractional carry for the dt-scaled smoke spawner, so puff density is frame-rate independent.
+    pub smoke_spawn_accum: f32,
 }
 
 /// Everything a per-mode draw routine needs for one frame.
@@ -89,6 +99,8 @@ pub struct Frame<'a> {
     pub pressed: &'a HashSet<u32>,
     /// Cursor position normalized to [0, 1] across the screen.
     pub cursor_norm: (f32, f32),
+    /// Spike-clamped frame time in seconds, for frame-rate-independent animation.
+    pub dt: f32,
 }
 
 /// Returns true if any of `keys` is currently held.

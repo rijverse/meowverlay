@@ -4,6 +4,11 @@
 use super::{any_pressed, AnimState, Frame, SmokeParticle};
 use egui::{Color32, Pos2, Stroke};
 
+/// Smoke puffs spawned per second while active. Matches the legacy "one puff per frame at 60 fps".
+const SMOKE_SPAWN_PER_SEC: f32 = 60.0;
+/// Alpha lost per second by each puff (legacy 0.015/frame × 60 fps), giving a ~1.1 s lifetime.
+const SMOKE_FADE_PER_SEC: f32 = 0.9;
+
 pub fn draw(frame: &Frame, anim: &mut AnimState) {
     let painter = frame.painter;
     let canvas = &frame.canvas;
@@ -49,21 +54,38 @@ pub fn draw(frame: &Frame, anim: &mut AnimState) {
     let mx = cx + (nx - 0.5) * rx * s;
     let my = cy + (ny - 0.5) * ry * s;
 
-    // Spawn a smoke puff at the cursor each frame while active.
+    // Spawn smoke puffs at the cursor while active, at a fixed per-second rate (dt-scaled with a
+    // fractional carry) so density doesn't change with the frame rate.
     if anim.smoke_toggled {
-        anim.smoke.push(SmokeParticle { x: mx, y: my, alpha: 1.0, size: 5.0 + fastrand_f32() * 4.0 });
+        anim.smoke_spawn_accum += SMOKE_SPAWN_PER_SEC * frame.dt;
+        while anim.smoke_spawn_accum >= 1.0 {
+            anim.smoke_spawn_accum -= 1.0;
+            anim.smoke.push(SmokeParticle {
+                x: mx,
+                y: my,
+                alpha: 1.0,
+                size: 5.0 + fastrand_f32() * 4.0,
+            });
+        }
+    } else {
+        anim.smoke_spawn_accum = 0.0;
     }
 
     // Advance + draw the smoke trail.
+    let fade = SMOKE_FADE_PER_SEC * frame.dt;
     anim.smoke.retain_mut(|p| {
-        p.alpha -= 0.015;
+        p.alpha -= fade;
         if p.alpha <= 0.0 {
             return false;
         }
         let center = canvas.map(p.x, p.y);
         let radius = p.size * canvas.scale.x;
         let a = (p.alpha * 0.7 * 255.0) as u8;
-        painter.circle_filled(center, radius, Color32::from_rgba_unmultiplied(140, 140, 150, a));
+        painter.circle_filled(
+            center,
+            radius,
+            Color32::from_rgba_unmultiplied(140, 140, 150, a),
+        );
         true
     });
 

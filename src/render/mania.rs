@@ -28,7 +28,11 @@ pub fn draw(frame: &Frame) {
     // Hand frames.
     let mut left = "mania_leftup";
     let mut right = "mania_rightup";
-    let held = |idx: usize| keys.get(idx).map(|k| frame.pressed.contains(k)).unwrap_or(false);
+    let held = |idx: usize| {
+        keys.get(idx)
+            .map(|k| frame.pressed.contains(k))
+            .unwrap_or(false)
+    };
 
     if is_4k {
         if held(0) {

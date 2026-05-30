@@ -1,0 +1,20 @@
+Meowverlay
+Copyright 2026 Meowverlay contributors
+
+This product is licensed under the Apache License, Version 2.0 (see the LICENSE
+file). The following third-party material is included under its own terms.
+
+--------------------------------------------------------------------------------
+Bundled skin assets (skins/default/img/**)
+--------------------------------------------------------------------------------
+
+The default skin's artwork is derived from the bongocat-osu project:
+
+    bongocat-osu — https://github.com/kuroni/bongocat-osu
+    Licensed under the MIT License.
+
+The same project also defines the `config.json` format and the numeric key-code
+convention that Meowverlay reproduces for drop-in skin compatibility. All credit
+for the original Bongo Cat artwork and skin layout goes to its authors and
+contributors. If you redistribute Meowverlay with these assets, keep this
+attribution intact.
