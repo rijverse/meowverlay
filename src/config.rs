@@ -212,10 +212,10 @@ pub struct MousePaw {
     pub paw_ending_point: Vec<f64>,
 }
 fn paw_start() -> Vec<f64> {
-    vec![211.0, 159.0]
+    vec![211.0, 159.0, 211.0, 159.0]
 }
 fn paw_end() -> Vec<f64> {
-    vec![258.0, 228.0]
+    vec![258.0, 228.0, 258.0, 228.0]
 }
 impl Default for MousePaw {
     fn default() -> Self {

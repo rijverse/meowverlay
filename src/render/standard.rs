@@ -46,8 +46,8 @@ pub fn draw(frame: &Frame, anim: &mut AnimState) {
     let off_x = dec.offset_x.get(idx).copied().unwrap_or(0.0);
     let off_y = dec.offset_y.get(idx).copied().unwrap_or(0.0);
     let s = dec.scalar.get(idx).copied().unwrap_or(1.0) as f32;
-    let cx = pe.first().copied().unwrap_or(258.0) as f32 + off_x as f32;
-    let cy = pe.get(1).copied().unwrap_or(228.0) as f32 + off_y as f32;
+    let cx = pe.get(idx * 2).or_else(|| pe.first()).copied().unwrap_or(if is_mouse { 258.0 } else { 258.0 }) as f32 + off_x as f32;
+    let cy = pe.get(idx * 2 + 1).or_else(|| pe.get(1)).copied().unwrap_or(228.0) as f32 + off_y as f32;
     let (nx, ny) = frame.cursor_norm;
     let rx = if is_mouse { 88.0 } else { 90.0 };
     let ry = if is_mouse { 52.0 } else { 55.0 };
@@ -112,8 +112,8 @@ pub fn draw(frame: &Frame, anim: &mut AnimState) {
     // Procedural arm: a quadratic curve from the shoulder to the cursor, stroked twice
     // (thick edge color, then thin fill color).
     let ps = &mp.paw_starting_point;
-    let x0 = ps.first().copied().unwrap_or(211.0) as f32;
-    let y0 = ps.get(1).copied().unwrap_or(159.0) as f32;
+    let x0 = ps.get(idx * 2).or_else(|| ps.first()).copied().unwrap_or(211.0) as f32;
+    let y0 = ps.get(idx * 2 + 1).or_else(|| ps.get(1)).copied().unwrap_or(159.0) as f32;
     let c1x = x0 + (mx - x0) * 0.1 - (my - y0) * 0.2;
     let c1y = y0 + (my - y0) * 0.8 + (mx - x0) * 0.2;
 
