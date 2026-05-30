@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  # Tagging a commit with something like v0.2.0 cuts a release.
+  push:
+    tags: ["v*"]
+  # Manual trigger for re-running a build against an existing tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build (for example v0.2.0)."
+        required: true
+
+# Two releases for the same tag should never run at once, but we do not want
+# to cancel a half-finished one either, so disable cancellation.
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+# Creating the release and uploading assets needs write access to contents.
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing should not throw away the binaries that did build.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          # macos-latest runners are Apple Silicon, so arm64 builds natively
+          # and x86_64 is a cross-compile from the same host.
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # On a manual run github.ref is a branch, so check out the tag the
+          # user asked for. On a tag push github.ref already points at the tag.
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install Rust (stable, ${{ matrix.target }})
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxkbcommon-dev libssl-dev libwayland-dev
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Separate cache per target so the two macOS builds do not collide.
+          key: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --locked --bin meowverlay --target ${{ matrix.target }}
+
+      # The app looks for skins/ next to the executable (see skin.rs), so the
+      # archive ships the binary, the skins, and the license and readme.
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ github.event.inputs.tag || github.ref_name }}"
+          ext=""
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            ext=".exe"
+          fi
+          stage="meowverlay-${version}-${{ matrix.target }}"
+          mkdir "$stage"
+          cp "target/${{ matrix.target }}/release/meowverlay${ext}" "$stage/"
+          cp -r skins "$stage/"
+          cp README.md LICENSE NOTICE "$stage/"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a -tzip "${stage}.zip" "$stage" >/dev/null
+            asset="${stage}.zip"
+          else
+            tar czf "${stage}.tar.gz" "$stage"
+            asset="${stage}.tar.gz"
+          fi
+          # A checksum next to each archive lets people verify their download.
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$asset" > "${asset}.sha256"
+          else
+            shasum -a 256 "$asset" > "${asset}.sha256"
+          fi
+          echo "ASSET=$asset" >> "$GITHUB_ENV"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          draft: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256

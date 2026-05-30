@@ -5,27 +5,53 @@ on:
     branches: [main]
   pull_request:
 
+# Cancel an in-progress run when new commits land on the same branch or PR
+# so we are not spending minutes on a commit nobody is looking at anymore.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# CI only reads the repository, so keep the token to the minimum.
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
+  # Every warning fails the build so lint debt cannot pile up unnoticed.
   RUSTFLAGS: -D warnings
 
 jobs:
-  build:
-    name: build & test (${{ matrix.os }})
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable + rustfmt)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  test:
+    name: clippy, build & test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      # Let every platform finish even if one fails, so a Windows-only
+      # break does not hide a separate macOS or Linux problem.
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust (stable, with MSRV check)
+      - name: Install Rust (stable + clippy)
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
+          components: clippy
 
-      # eframe's Linux backends (wayland/x11 + glow) need these system libraries.
+      # eframe's Linux backends (wayland/x11 + glow) and the evdev input
+      # path need these system libraries to build and link.
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -34,30 +60,30 @@ jobs:
             libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
             libxkbcommon-dev libssl-dev libwayland-dev
 
-      - name: Cache cargo registry and target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+      # Caches the cargo registry plus a per-OS target directory, keyed off
+      # Cargo.lock. Much less fiddly than hand-rolling actions/cache.
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Clippy (deny warnings)
-        run: cargo clippy --all-targets -- -D warnings
+      # Clippy runs on each OS so the platform-specific input backends
+      # (evdev on Linux, device_query on Windows and macOS) all get linted.
+      - name: Clippy (all targets, deny warnings)
+        run: cargo clippy --all-targets --locked -- -D warnings
 
       - name: Build
-        run: cargo build --all-targets --verbose
+        run: cargo build --all-targets --locked --verbose
 
       - name: Test
-        run: cargo test --verbose
+        run: cargo test --locked --verbose
 
   msrv:
     name: MSRV (1.92)
     runs-on: ubuntu-latest
+    # The minimum supported toolchain may emit warnings that newer stable
+    # does not, so do not turn those into errors here. We only care that the
+    # crate still compiles on the version advertised in Cargo.toml.
+    env:
+      RUSTFLAGS: ""
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust 1.92
@@ -68,5 +94,7 @@ jobs:
           sudo apt-get install -y \
             libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
             libxkbcommon-dev libssl-dev libwayland-dev
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
       - name: Build on MSRV
-        run: cargo build --verbose
+        run: cargo build --locked --verbose
