@@ -1,6 +1,6 @@
 //! osu! Taiko mode. Port of `drawTaiko`.
 
-use super::{any_pressed, Frame};
+use super::{any_pressed, unbound_key, Frame};
 
 pub fn draw(frame: &Frame) {
     let painter = frame.painter;
@@ -15,10 +15,15 @@ pub fn draw(frame: &Frame) {
     let lr = any_pressed(frame.pressed, &t.left_rim);
     let rc = any_pressed(frame.pressed, &t.right_centre);
     let rr = any_pressed(frame.pressed, &t.right_rim);
+    // An unbound key produces a centre hit on exactly one hand, chosen by key-code parity.
+    let fallback = unbound_key(
+        frame.pressed,
+        &[&t.left_centre, &t.left_rim, &t.right_centre, &t.right_rim],
+    );
 
     let left = if lr {
         "taiko_leftrim"
-    } else if lc {
+    } else if lc || fallback.is_some_and(|code| code % 2 == 0) {
         "taiko_leftcentre"
     } else {
         "taiko_leftup"
@@ -29,7 +34,7 @@ pub fn draw(frame: &Frame) {
 
     let right = if rr {
         "taiko_rightrim"
-    } else if rc {
+    } else if rc || fallback.is_some_and(|code| code % 2 != 0) {
         "taiko_rightcentre"
     } else {
         "taiko_rightup"

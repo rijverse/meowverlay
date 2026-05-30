@@ -1,6 +1,6 @@
 //! osu! Catch the Beat mode. Port of `drawCatch`.
 
-use super::{any_pressed, Frame};
+use super::{any_pressed, unbound_key, Frame};
 
 pub fn draw(frame: &Frame) {
     let painter = frame.painter;
@@ -14,6 +14,7 @@ pub fn draw(frame: &Frame) {
     let l = any_pressed(frame.pressed, &c.left);
     let r = any_pressed(frame.pressed, &c.right);
     let d = any_pressed(frame.pressed, &c.dash);
+    let fallback = unbound_key(frame.pressed, &[&c.left, &c.right, &c.dash]);
 
     let key = if d {
         "catch_dash"
@@ -23,6 +24,9 @@ pub fn draw(frame: &Frame) {
         "catch_left"
     } else if r {
         "catch_right"
+    } else if let Some(code) = fallback {
+        // Any unbound key drives left/right movement by key-code parity.
+        if code % 2 == 0 { "catch_left" } else { "catch_right" }
     } else {
         "catch_up"
     };

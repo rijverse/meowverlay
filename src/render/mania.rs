@@ -1,6 +1,6 @@
 //! osu! Mania mode (4K / 7K). Port of `drawMania`.
 
-use super::Frame;
+use super::{unbound_key, Frame};
 
 pub fn draw(frame: &Frame) {
     let painter = frame.painter;
@@ -25,7 +25,10 @@ pub fn draw(frame: &Frame) {
         }
     }
 
-    // Hand frames.
+    // Hand frames. An unbound key drops one hand, chosen by key-code parity (even = left).
+    let fallback = unbound_key(frame.pressed, &[keys]);
+    let fallback_left = fallback.is_some_and(|code| code % 2 == 0);
+    let fallback_right = fallback.is_some_and(|code| code % 2 != 0);
     let mut left = "mania_leftup";
     let mut right = "mania_rightup";
     let held = |idx: usize| {
@@ -39,11 +42,15 @@ pub fn draw(frame: &Frame) {
             left = "mania_left0";
         } else if held(1) {
             left = "mania_left1";
+        } else if fallback_left {
+            left = "mania_left0";
         }
         if held(2) {
             right = "mania_right0";
         } else if held(3) {
             right = "mania_right1";
+        } else if fallback_right {
+            right = "mania_right0";
         }
     } else {
         if held(0) {
@@ -52,6 +59,8 @@ pub fn draw(frame: &Frame) {
             left = "mania_left1";
         } else if held(2) || held(3) {
             left = "mania_left2";
+        } else if fallback_left {
+            left = "mania_left0";
         }
         if held(4) {
             right = "mania_right0";
@@ -59,6 +68,8 @@ pub fn draw(frame: &Frame) {
             right = "mania_right1";
         } else if held(6) {
             right = "mania_right2";
+        } else if fallback_right {
+            right = "mania_right0";
         }
     }
 

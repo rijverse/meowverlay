@@ -108,6 +108,18 @@ fn any_pressed(pressed: &HashSet<u32>, keys: &[u32]) -> bool {
     keys.iter().any(|k| pressed.contains(k))
 }
 
+/// Lowest held keyboard key (VK > 4, i.e. excluding mouse buttons 1/2/4) that is *not* bound to any
+/// of the `bound` key groups. Powers each mode's "any unbound key still animates the cat" fallback:
+/// `Some(code)` means an unbound key is down, and `code % 2` picks left/right for visual variety.
+/// Excluding the mode's own bindings keeps a bound press for one hand from also driving the other.
+fn unbound_key(pressed: &HashSet<u32>, bound: &[&[u32]]) -> Option<u32> {
+    pressed
+        .iter()
+        .copied()
+        .filter(|k| *k > 4 && !bound.iter().any(|group| group.contains(k)))
+        .min()
+}
+
 /// Draw the current game mode.
 pub fn draw(frame: &Frame, anim: &mut AnimState) {
     match frame.config.mode {

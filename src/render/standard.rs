@@ -89,7 +89,8 @@ pub fn draw(frame: &Frame, anim: &mut AnimState) {
         true
     });
 
-    // Left paw frame selection (priority matches the original).
+    // Left paw frame selection (priority matches the original, plus any-key fallback).
+    let fallback = super::unbound_key(frame.pressed, &[&osu.key1, &osu.key2, &osu.smoke, &osu.wave]);
     let left_paw_key = if wave_active {
         "wave"
     } else if anim.smoke_toggled {
@@ -98,6 +99,9 @@ pub fn draw(frame: &Frame, anim: &mut AnimState) {
         "osu_left"
     } else if k2 {
         "osu_right"
+    } else if let Some(code) = fallback {
+        // Any unbound key alternates the paw frame by key-code parity, for visual variety.
+        if code % 2 == 0 { "osu_left" } else { "osu_right" }
     } else {
         "osu_up"
     };
