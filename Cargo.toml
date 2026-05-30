@@ -23,3 +23,6 @@ anyhow = "1"
 [profile.release]
 opt-level = 3
 lto = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+evdev = "0.13"

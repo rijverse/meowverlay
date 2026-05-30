@@ -266,6 +266,12 @@ impl eframe::App for MeowApp {
         // commands and the deferred settings/toast windows.
         let ctx = ui.ctx().clone();
 
+        // Keep the input backend's screen resolution in sync so the evdev cursor (which has no
+        // absolute pointer to read under Wayland) is clamped/scaled to the same play resolution the
+        // paw mapping below uses. No-op for the device_query backend.
+        let res = &self.skin.config.resolution;
+        self.input.set_resolution(res.width, res.height);
+
         let input = self.input.poll();
         // While capturing a rebind, route input to the binder only, otherwise the Ctrl+Shift+L
         // used to reach a bind would also toggle the lock mid-capture.
